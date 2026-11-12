@@ -10,8 +10,8 @@ Satu alur penuh, berjalan di belakang layar:
   TAHAP 2  Upload ke portal PINUS Tools Purchase
            Import Excel <- Bills | Import Purchase UOM <- Stock | Import Pricelist <- Pricelist
 
-Hanya file yang BERHASIL ditarik & lolos validasi di tahap 1 yang diunggah di tahap 2.
-File lama tidak pernah diunggah ulang.
+Tahap 2 hanya berjalan jika KETIGA tarikan berhasil & lolos validasi. Jika satu saja gagal,
+upload dibatalkan seluruhnya (portal tidak diubah). File lama tidak pernah diunggah ulang.
 
 Pemakaian:
   python src/agent_kumbang.py           # jalankan penuh
@@ -56,8 +56,11 @@ def main() -> int:
     files = {TARIK[n][1]: p for n, p in hasil_tarik.items()}
 
     log.info(">>> TAHAP 2: UPLOAD KE PORTAL")
-    if not files:
-        log.error("Tidak ada tarikan yang berhasil, upload dilewati")
+    gagal_tarik = [n for n in TARIK if n not in hasil_tarik]
+    if kode_tarik != 0 or gagal_tarik:
+        # Aturan: data harus LENGKAP (ketiganya) baru boleh diunggah. Satu gagal -> semua batal.
+        log.error("UPLOAD DIBATALKAN: tarikan belum lengkap, gagal: %s. Portal tidak diubah sama sekali.",
+                  gagal_tarik or "login/lainnya")
         kode_upload = 1
     else:
         kode_upload = upload_portal.jalankan(cek_saja=a.cek, lihat=a.lihat, files=files)

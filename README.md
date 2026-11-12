@@ -30,7 +30,8 @@ TAHAP 2 — Upload ke portal procurement.pinuspackindo.com (user Admin)
 ## Pengaman
 
 - Jumlah data di setiap file dicocokkan dengan jumlah di HashMicro; kalau beda → tarikan dianggap gagal.
-- Hanya file yang berhasil ditarik **pada jalan ini** yang diunggah (file lama tidak pernah diunggah ulang).
+- Upload hanya berjalan jika **ketiga** tarikan berhasil pada jalan ini. Satu gagal → upload dibatalkan
+  seluruhnya, portal tidak diubah (file lama tidak pernah diunggah ulang).
 - Bills tidak diunggah jika barisnya < 80% dari record portal saat ini (mencegah data portal terhapus).
 - Upload dibatalkan jika portal tidak terhubung ke Supabase atau menampilkan notifikasi error.
 - Di menu Action HashMicro hanya item yang teksnya persis "Export" yang diklik.
