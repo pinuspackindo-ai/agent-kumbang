@@ -42,10 +42,15 @@ def tarik_bills(page) -> Path:
     terlihat(page.get_by_role("button", name=re.compile(r"Action"))).click()
 
     langkah("Klik Export (harus persis 'Export')")
-    item = page.locator(".dropdown-menu.show").get_by_text("Export", exact=True)
-    if item.count() != 1:
-        raise RuntimeError("Item menu 'Export' tidak ditemukan persis satu. Berhenti demi keamanan.")
-    item.click()
+    # Tunggu menu Action benar-benar tampil (di server cloud bisa lebih lambat),
+    # lalu pastikan item 'Export' yang TERLIHAT tepat satu sebelum diklik.
+    semua = page.locator(".dropdown-menu").get_by_text("Export", exact=True)
+    terlihat(semua, 15_000)
+    page.wait_for_timeout(500)  # biar animasi menu selesai
+    tampil = [semua.nth(i) for i in range(semua.count()) if semua.nth(i).is_visible()]
+    if len(tampil) != 1:
+        raise RuntimeError(f"Item menu 'Export' yang terlihat ada {len(tampil)}, harus 1. Berhenti demi keamanan.")
+    tampil[0].click()
 
     modal = page.locator(".modal:visible").last
     modal.wait_for(timeout=30_000)
