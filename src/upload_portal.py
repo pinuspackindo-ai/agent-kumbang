@@ -20,7 +20,8 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from hm_common import ROOT, buka_browser, langkah, log, screenshot_error, sensor, setup_logging, terlihat
+from hm_common import (LOGIN_DITOLAK, ROOT, buka_browser, langkah, log, screenshot_error, sensor,
+                       setup_logging, terlihat)
 
 PORTAL_URL = os.getenv("PORTAL_URL", "https://procurement.pinuspackindo.com").rstrip("/")
 PORTAL_USER = os.getenv("PORTAL_USER", "")
@@ -50,6 +51,10 @@ JS_REKAM_TOAST = """() => {
 }"""
 
 
+class PortalDitolak(RuntimeError):
+    """User/PIN portal ditolak -> jangan diulang."""
+
+
 def file_terbaru(awalan: str) -> Path:
     calon = sorted((ROOT / "data" / "hasil").glob(f"*/{awalan}*.xlsx"), key=lambda p: p.stat().st_mtime)
     calon = [p for p in calon if not (awalan == "stock_wh_" and "raw" in p.name)]
@@ -73,7 +78,15 @@ def login_portal(page) -> None:
     terlihat(page.locator("#loginUserSelect"), 60_000).select_option(label=PORTAL_USER)
     page.locator("#loginPin").fill(PORTAL_PIN)
     page.locator("button.login-btn").click()
-    terlihat(page.locator("#importBtn"), 60_000)
+    # Tunggu: masuk (tombol import muncul) ATAU ditolak (pesan #loginErr muncul)
+    for _ in range(120):
+        if page.locator("#loginErr").is_visible():
+            raise PortalDitolak("Login portal ditolak: " + page.locator("#loginErr").inner_text().strip())
+        if page.locator("#importBtn").is_visible():
+            break
+        page.wait_for_timeout(500)
+    else:
+        raise RuntimeError("Halaman portal tidak terbuka setelah login (60 detik)")
 
     langkah("Tunggu data portal selesai dimuat dari Supabase")
     page.wait_for_function(
@@ -171,6 +184,9 @@ def jalankan(cek_saja: bool = False, lihat: bool = False, files: dict | None = N
 
             sesudah = jumlah_record_portal(page)
             log.info("   Record Database Purchase di portal setelah upload: %d (sebelumnya %d)", sesudah, sebelum)
+        except PortalDitolak as e:
+            log.error("UPLOAD GAGAL (PIN DITOLAK): %s (screenshot: %s)", sensor(e), screenshot_error(page, "upload"))
+            return LOGIN_DITOLAK
         except Exception as e:  # noqa: BLE001
             log.error("UPLOAD GAGAL: %s (screenshot: %s)", sensor(e), screenshot_error(page, "upload"))
             return 1

@@ -27,6 +27,15 @@ TAHAP 2 — Upload ke portal procurement.pinuspackindo.com (user Admin)
 | `Agent Kumbang - Database Fluktuasi.bat --cek` | Tarik sungguhan, upload hanya dicek (tidak mengunggah) |
 | `Agent Kumbang - Database Fluktuasi.bat --lihat` | Browser terlihat, untuk uji coba |
 
+## Pengulangan otomatis
+
+- Jika gagal (HashMicro down/lambat, koneksi putus, portal error, data tidak cocok), **seluruh alur
+  diulang tiap 3 menit sampai sukses**, berhenti di jam batas **19.00 WIB**
+  (`AGENT_BATAS_JAM`, `AGENT_JEDA_MENIT` di workflow).
+- **Kecuali username/password/PIN ditolak** → langsung berhenti (mengulang bisa mengunci akun).
+  Perbarui secret di GitHub lalu jalankan manual.
+- `--sekali` = tanpa pengulangan.
+
 ## Pengaman
 
 - Jumlah data di setiap file dicocokkan dengan jumlah di HashMicro; kalau beda → tarikan dianggap gagal.

@@ -156,6 +156,9 @@ def sesi_browser(lihat: bool = False):
                     pass
 
 
+LOGIN_DITOLAK = 3  # kode keluar khusus: username/password/PIN ditolak -> jangan diulang
+
+
 def jalankan_tugas(tugas: dict, lihat: bool = False, hasil: dict | None = None) -> int:
     """
     Login sekali, lalu jalankan setiap tugas {nama: fungsi(page)} berurutan.
@@ -173,7 +176,11 @@ def jalankan_tugas(tugas: dict, lihat: bool = False, hasil: dict | None = None) 
                     break
                 except Exception as e:  # noqa: BLE001
                     shot = screenshot_error(page, "login")
-                    if "ditolak" in str(e) or percobaan == 3:
+                    if "ditolak" in str(e):
+                        # Password salah: mengulang tidak akan berhasil & bisa mengunci akun
+                        log.error("GAGAL login (PASSWORD DITOLAK): %s (screenshot: %s)", sensor(e), shot)
+                        return LOGIN_DITOLAK
+                    if percobaan == 3:
                         log.error("GAGAL login: %s (screenshot: %s)", sensor(e), shot)
                         return 1
                     log.warning("Login percobaan %d gagal (%s), ulangi 15 detik lagi",

@@ -22,9 +22,12 @@ jobs:
   agent-kumbang:
     # Dikunci ke 24.04: versi Ubuntu yang resmi didukung Playwright 1.52 (ubuntu-latest bisa lebih baru)
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # Agent mengulang sendiri sampai sukses (maks sampai AGENT_BATAS_JAM); 170 menit = 16.30 -> ±19.20
+    timeout-minutes: 170
     env:
       TZ: Asia/Jakarta
+      AGENT_BATAS_JAM: "19:00"
+      AGENT_JEDA_MENIT: "3"
       HM_BASE_URL: https://pinuspackindo.hashmicro.co
       HM_TEMPLATE_BILLS: Tools Purchase (Daily)
       PORTAL_URL: https://procurement.pinuspackindo.com
