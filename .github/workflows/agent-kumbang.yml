@@ -1,0 +1,63 @@
+name: Agent Kumbang - Database Fluktuasi
+
+on:
+  schedule:
+    # 16.30 WIB = 09.30 UTC, setiap hari. Target data sudah terupload sebelum 17.00 WIB.
+    - cron: "30 9 * * *"
+  workflow_dispatch:
+    # Tombol "Run workflow" di tab Actions untuk menjalankan manual
+    inputs:
+      mode:
+        description: "penuh = tarik + upload | cek = tarik saja, upload hanya dicek"
+        type: choice
+        options: [penuh, cek]
+        default: penuh
+
+# Jangan pernah jalan dua kali bersamaan (Import Excel portal menghapus & menulis ulang data)
+concurrency:
+  group: agent-kumbang
+  cancel-in-progress: false
+
+jobs:
+  agent-kumbang:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TZ: Asia/Jakarta
+      HM_BASE_URL: https://pinuspackindo.hashmicro.co
+      HM_TEMPLATE_BILLS: Tools Purchase (Daily)
+      PORTAL_URL: https://procurement.pinuspackindo.com
+      HM_USER: ${{ secrets.HM_USER }}
+      HM_PASS: ${{ secrets.HM_PASS }}
+      PORTAL_USER: ${{ secrets.PORTAL_USER }}
+      PORTAL_PIN: ${{ secrets.PORTAL_PIN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Pasang paket & browser
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Jalankan Agent Kumbang
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "cek" ]; then
+            python src/agent_kumbang.py --cek
+          else
+            python src/agent_kumbang.py
+          fi
+
+      - name: Simpan log & file hasil (14 hari)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-kumbang-${{ github.run_number }}
+          path: |
+            logs/
+            data/hasil/
+          retention-days: 14
