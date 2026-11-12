@@ -5,11 +5,18 @@ on:
     # Jadwal GitHub "best effort": bisa terlambat atau DILEWATI saat server GitHub ramai.
     # Karena itu dipasang beberapa jadwal cadangan; job "cek-jadwal" memastikan agent hanya
     # benar-benar jalan SEKALI per hari (jadwal berikutnya dilewati jika sudah sukses hari ini).
-    # Jam dalam UTC (WIB = UTC+7).
+    # Terlambat boleh, terlewat jangan: 10 jadwal tersebar 16.30-18.23 WIB, di menit "ganjil"
+    # (menit :00/:30 paling padat di GitHub). Jam dalam UTC (WIB = UTC+7).
     - cron: "30 9 * * *"   # 16.30 WIB  (utama)
-    - cron: "37 9 * * *"   # 16.37 WIB  (cadangan 1)
-    - cron: "44 9 * * *"   # 16.44 WIB  (cadangan 2)
-    - cron: "51 9 * * *"   # 16.51 WIB  (cadangan 3)
+    - cron: "37 9 * * *"   # 16.37 WIB  (cadangan)
+    - cron: "44 9 * * *"   # 16.44 WIB
+    - cron: "51 9 * * *"   # 16.51 WIB
+    - cron: "7 10 * * *"   # 17.07 WIB
+    - cron: "23 10 * * *"  # 17.23 WIB
+    - cron: "37 10 * * *"  # 17.37 WIB
+    - cron: "53 10 * * *"  # 17.53 WIB
+    - cron: "7 11 * * *"   # 18.07 WIB
+    - cron: "23 11 * * *"  # 18.23 WIB
   workflow_dispatch:
     # Tombol "Run workflow" di tab Actions untuk menjalankan manual (selalu jalan, tanpa cek)
     inputs:
