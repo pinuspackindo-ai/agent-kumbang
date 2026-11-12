@@ -2,10 +2,16 @@ name: Agent Kumbang - Database Fluktuasi
 
 on:
   schedule:
-    # 16.30 WIB = 09.30 UTC, setiap hari. Target data sudah terupload sebelum 17.00 WIB.
-    - cron: "30 9 * * *"
+    # Jadwal GitHub "best effort": bisa terlambat atau DILEWATI saat server GitHub ramai.
+    # Karena itu dipasang beberapa jadwal cadangan; job "cek-jadwal" memastikan agent hanya
+    # benar-benar jalan SEKALI per hari (jadwal berikutnya dilewati jika sudah sukses hari ini).
+    # Jam dalam UTC (WIB = UTC+7).
+    - cron: "30 9 * * *"   # 16.30 WIB  (utama)
+    - cron: "37 9 * * *"   # 16.37 WIB  (cadangan 1)
+    - cron: "44 9 * * *"   # 16.44 WIB  (cadangan 2)
+    - cron: "51 9 * * *"   # 16.51 WIB  (cadangan 3)
   workflow_dispatch:
-    # Tombol "Run workflow" di tab Actions untuk menjalankan manual
+    # Tombol "Run workflow" di tab Actions untuk menjalankan manual (selalu jalan, tanpa cek)
     inputs:
       mode:
         description: "penuh = tarik + upload | cek = tarik saja, upload hanya dicek"
@@ -13,13 +19,48 @@ on:
         options: [penuh, cek]
         default: penuh
 
-# Jangan pernah jalan dua kali bersamaan (Import Excel portal menghapus & menulis ulang data)
+# Jangan pernah jalan dua kali bersamaan (Import Excel portal menghapus & menulis ulang data).
+# Jadwal cadangan yang datang saat agent masih jalan akan MENUNGGU, lalu dicek ulang.
 concurrency:
   group: agent-kumbang
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: read   # untuk membaca riwayat run (cek sudah sukses hari ini)
+
 jobs:
+  cek-jadwal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      jalan: ${{ steps.cek.outputs.jalan }}
+    steps:
+      - name: Sudah sukses hari ini?
+        id: cek
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Run manual -> selalu jalan"
+            echo "jalan=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          hari_ini=$(date -u +%Y-%m-%d)   # 16.30-17.00 WIB masih tanggal UTC yang sama
+          sukses=$(gh run list -R "${{ github.repository }}" -w agent-kumbang.yml \
+                     -e schedule -s success -L 20 --json createdAt \
+                     --jq "[.[] | select(.createdAt | startswith(\"$hari_ini\"))] | length")
+          echo "Run terjadwal yang sudah SUKSES hari ini: $sukses"
+          if [ "$sukses" -gt 0 ]; then
+            echo "Sudah sukses hari ini -> jadwal cadangan ini DILEWATI"
+            echo "jalan=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "jalan=true" >> "$GITHUB_OUTPUT"
+          fi
+
   agent-kumbang:
+    needs: cek-jadwal
+    if: needs.cek-jadwal.outputs.jalan == 'true'
     # Dikunci ke 24.04: versi Ubuntu yang resmi didukung Playwright 1.52 (ubuntu-latest bisa lebih baru)
     runs-on: ubuntu-24.04
     # Agent mengulang sendiri sampai sukses (maks sampai AGENT_BATAS_JAM); 170 menit = 16.30 -> ±19.20
