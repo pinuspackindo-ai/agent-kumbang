@@ -1,4 +1,4 @@
-﻿"""
+"""
 Tarik data Bills dari HashMicro.
 
 Alur (sesuai panduan user):

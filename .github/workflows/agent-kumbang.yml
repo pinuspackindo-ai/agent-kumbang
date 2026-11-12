@@ -20,7 +20,8 @@ concurrency:
 
 jobs:
   agent-kumbang:
-    runs-on: ubuntu-latest
+    # Dikunci ke 24.04: versi Ubuntu yang resmi didukung Playwright 1.52 (ubuntu-latest bisa lebih baru)
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       TZ: Asia/Jakarta
@@ -32,17 +33,18 @@ jobs:
       PORTAL_USER: ${{ secrets.PORTAL_USER }}
       PORTAL_PIN: ${{ secrets.PORTAL_PIN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
           cache: pip
 
-      - name: Pasang paket & browser
-        run: |
-          pip install -r requirements.txt
-          python -m playwright install --with-deps chromium
+      - name: Pasang paket Python
+        run: pip install -r requirements.txt
+
+      - name: Pasang browser Chromium
+        run: python -m playwright install --with-deps chromium
 
       - name: Jalankan Agent Kumbang
         run: |
@@ -54,7 +56,7 @@ jobs:
 
       - name: Simpan log & file hasil (14 hari)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: agent-kumbang-${{ github.run_number }}
           path: |
